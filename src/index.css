@@ -1,0 +1,788 @@
+:root {
+  --text: #4b4757;
+  --text-h: #08060d;
+  --bg: #f6f6f8;
+  --surface: #fff;
+  --border: #e2e1e6;
+  --accent: #5b3bd6;
+  --accent-text: #fff;
+  --error-bg: #fdecec;
+  --error-text: #a12424;
+  --info-bg: #ecf2fd;
+  --info-text: #1f4d99;
+  --ok: #1d7a46;
+  --warn: #9a6200;
+  --fail: #b42323;
+  --shadow: rgba(0, 0, 0, 0.08) 0 8px 24px -6px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/1.5 var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #b4b1bd;
+    --text-h: #f3f3f6;
+    --bg: #15151a;
+    --surface: #1e1e25;
+    --border: #2f2f3a;
+    --accent: #8f74ff;
+    --error-bg: #3a1c1f;
+    --error-text: #f2a6a6;
+    --info-bg: #1b2740;
+    --info-text: #a9c4f5;
+    --ok: #5fd08f;
+    --warn: #f0b54a;
+    --fail: #f08080;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-h);
+}
+
+label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 4px;
+}
+
+input,
+select {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-h);
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.secundario {
+  background: transparent;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+}
+
+.alerta {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.alerta-error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.alerta-info {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.cargando {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+
+/* Login */
+.login {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.tarjeta {
+  width: 100%;
+  max-width: 380px;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.tarjeta .subtitulo {
+  margin: 4px 0 24px;
+  font-size: 0.9rem;
+}
+
+.tarjeta input {
+  margin-bottom: 16px;
+}
+
+.tarjeta button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Campo de contraseña con boton mostrar/ocultar */
+.campo-contrasena {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.tarjeta .campo-contrasena input {
+  margin-bottom: 0;
+  padding-right: 48px;
+}
+
+/* Oculta el boton de "revelar" propio de Edge para no tener dos ojos */
+.campo-contrasena input::-ms-reveal,
+.campo-contrasena input::-ms-clear {
+  display: none;
+}
+
+.tarjeta button.ver-contrasena {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text);
+  border-radius: 6px;
+}
+
+.tarjeta button.ver-contrasena:hover {
+  color: var(--text-h);
+  background: var(--bg);
+}
+
+.cambio-vista {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Menu de la barra superior (rutas privadas con titulo) */
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.menu a {
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.menu a:hover {
+  color: var(--text-h);
+  background: var(--bg);
+}
+
+.menu a.active {
+  color: var(--accent);
+  background: var(--bg);
+}
+
+.contenido h1 {
+  margin-bottom: 20px;
+}
+
+/* Configuracion de rutas */
+.form-rutas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.form-rutas .campo {
+  flex: 1 1 180px;
+}
+
+.campo-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.campo-check input {
+  width: auto;
+}
+
+.acciones-form,
+td.acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.orden {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.orden span {
+  min-width: 1.5em;
+  font-variant-numeric: tabular-nums;
+}
+
+.orden button {
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+td.acciones button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+button.secundario.peligro {
+  color: var(--fail);
+}
+
+tr.fila-editando td {
+  background: var(--info-bg);
+}
+
+/* Facturas */
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-h);
+}
+
+.barra-usuario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.contenido {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.busqueda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.busqueda .campo {
+  flex: 1 1 200px;
+}
+
+/* Seleccion multiple (components/SeleccionMultiple.tsx) */
+.etiqueta {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 4px;
+}
+
+.multiselect {
+  position: relative;
+}
+
+.multiselect summary {
+  list-style: none;
+  padding: 10px 32px 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-h);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.multiselect summary::-webkit-details-marker {
+  display: none;
+}
+
+.multiselect summary::after {
+  content: '▾';
+  position: absolute;
+  right: 12px;
+  top: 10px;
+}
+
+.multiselect summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.multiselect.deshabilitado summary {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.multiselect-opciones {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.multiselect-opciones .campo-check {
+  margin: 0;
+  padding: 4px 0;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.multiselect-opciones button.enlace {
+  align-self: flex-start;
+  padding: 4px 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.ayuda {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
+/* Menu Exportar (components/MenuExportar.tsx) */
+.menu-exportar {
+  position: relative;
+}
+
+.menu-exportar summary {
+  list-style: none;
+  font-weight: 600;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-h);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu-exportar summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-exportar summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.menu-exportar.deshabilitado summary {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.menu-exportar-opciones {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.menu-exportar-opciones button {
+  text-align: left;
+  border: 0;
+}
+
+.menu-exportar-opciones button:hover {
+  background: var(--bg);
+}
+
+/* Logo de la web */
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  height: 32px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.logo-login {
+  display: block;
+  max-height: 64px;
+  max-width: 220px;
+  margin: 0 auto 16px;
+  object-fit: contain;
+}
+
+.config-logo {
+  margin-bottom: 32px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.config-logo h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: var(--text-h);
+}
+
+.form-inicio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.form-inicio .campo {
+  flex: 1 1 320px;
+  max-width: 520px;
+}
+
+.config-logo + .config-logo {
+  margin-top: -16px;
+}
+
+.config-logo .ayuda {
+  margin: 8px 0 0;
+}
+
+.config-logo-contenido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+.config-logo-vista {
+  display: grid;
+  place-items: center;
+  width: 200px;
+  height: 100px;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 0.85rem;
+}
+
+.config-logo-vista img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.config-logo-acciones {
+  flex: 1 1 280px;
+}
+
+.config-logo-acciones .ayuda {
+  margin: 0 0 10px;
+}
+
+.boton-archivo {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-archivo:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.boton-archivo input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* Facturas: cuantas de las buscadas se encontraron */
+.insignia {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.insignia-ok {
+  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  color: var(--ok);
+}
+
+.insignia-alerta {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.no-encontradas {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--error-bg);
+  color: var(--error-text);
+  font-size: 0.9rem;
+}
+
+.no-encontradas summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.no-encontradas p {
+  margin: 8px 0 4px;
+}
+
+.no-encontradas ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.no-encontradas button {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+/* Paginacion */
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.paginacion button {
+  padding: 6px 12px;
+}
+
+/* Respuesta larga del servidor: 3 lineas; el texto completo queda en el title */
+.recortado {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Modal de bases de auditoria */
+.modal {
+  width: min(960px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.modal-cabecera h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-h);
+}
+
+.totales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.resumen {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.vacio {
+  margin: 0;
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th,
+td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+th {
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+td.respuesta {
+  max-width: 360px;
+  overflow-wrap: anywhere;
+}
+
+.estado {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado-delivered {
+  color: var(--ok);
+}
+
+.estado-processed,
+.estado-deferred {
+  color: var(--warn);
+}
+
+.estado-bounced,
+.estado-blocked,
+.estado-dropped {
+  color: var(--fail);
+}
+
+@media (max-width: 600px) {
+  .barra {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+
+  .tarjeta {
+    padding: 24px;
+  }
+}
