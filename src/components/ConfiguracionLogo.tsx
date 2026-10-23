@@ -1,3 +1,4 @@
+import { useConfirmar } from './useConfirmar.ts'
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { MAX_LOGO_KB, TIPOS_LOGO, quitarLogo, subirLogo, useLogo } from '../sitio/logo.ts'
 
@@ -5,6 +6,7 @@ const mensajeDe = (err: unknown, porDefecto: string) => (err instanceof Error ? 
 
 // Logo de la web (barra superior, login y favicon). Se guarda en Mongo: coleccion configuracionsitio.
 export default function ConfiguracionLogo() {
+  const confirmar = useConfirmar()
   const logo = useLogo()
   const [archivo, setArchivo] = useState<File | null>(null)
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null)
@@ -57,7 +59,7 @@ export default function ConfiguracionLogo() {
   }
 
   const quitar = async () => {
-    if (!window.confirm('¿Quitar el logo de la web?')) return
+    if (!await confirmar('¿Quitar el logo de la web?')) return
     setError(null)
     setMensaje(null)
     setGuardando(true)

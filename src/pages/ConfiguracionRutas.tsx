@@ -1,3 +1,5 @@
+import { useRespuestaTiempoReal } from '../components/useRespuestaTiempoReal.ts'
+import { useConfirmar } from '../components/useConfirmar.ts'
 import { useEffect, useState, type FormEvent } from 'react'
 import {
   actualizarRuta,
@@ -5,18 +7,24 @@ import {
   eliminarRuta,
   moverRuta,
   obtenerAccessTypes,
+  obtenerRolesDeRutas,
   obtenerTodasLasRutas,
   type AccessType,
   type DatosRuta,
+  type RolDisponible,
   type Ruta,
 } from '../api/rutas.ts'
+import SeleccionMultiple from '../components/SeleccionMultiple.tsx'
+import ConfiguracionApariencia from '../components/ConfiguracionApariencia.tsx'
 import ConfiguracionInicio from '../components/ConfiguracionInicio.tsx'
 import ConfiguracionLogo from '../components/ConfiguracionLogo.tsx'
+import ModalRoles from '../components/ModalRoles.tsx'
+import ModalAuditoria from '../components/ModalAuditoria.tsx'
 import { ACCESO } from '../rutas/accesos.ts'
 import { COMPONENTES_CRITICOS, NOMBRES_COMPONENTES } from '../rutas/componentes.ts'
 import { useRutas } from '../rutas/useRutas.ts'
 
-const VACIO: DatosRuta = { path: '/', componente: '', titulo: '', accessType: '', activo: true }
+const VACIO: DatosRuta = { path: '/', componente: '', titulo: '', accessType: '', activo: true, roles: [] }
 
 const mensajeDe = (err: unknown, porDefecto: string) => (err instanceof Error ? err.message : porDefecto)
 
@@ -25,7 +33,10 @@ const normalizarPath = (path: string) => path.trim().toLowerCase().replace(/\/+$
 
 // Pantalla para configurar las rutas dinamicas (coleccion rutasseguridad)
 export default function ConfiguracionRutas() {
+  const confirmar = useConfirmar()
   const { recargar } = useRutas()
+  const [mostrarRoles, setMostrarRoles] = useState(false)
+  const [mostrarAuditoria, setMostrarAuditoria] = useState(false)
   const [rutas, setRutas] = useState<Ruta[]>([])
   const [accessTypes, setAccessTypes] = useState<AccessType[]>([])
   const [form, setForm] = useState<DatosRuta>(VACIO)
@@ -35,16 +46,33 @@ export default function ConfiguracionRutas() {
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [moviendo, setMoviendo] = useState(false)
+  useRespuestaTiempoReal<{rutas: Ruta[]}>('/rutas/todas', datos => setRutas(datos.rutas))
+  // Roles que se pueden asignar a una ruta para ocultarla a quien no los tenga
+  const [rolesDisponibles, setRolesDisponibles] = useState<RolDisponible[]>([])
 
   useEffect(() => {
-    Promise.all([obtenerTodasLasRutas(), obtenerAccessTypes()])
-      .then(([todas, tipos]) => {
+    Promise.all([obtenerTodasLasRutas(), obtenerAccessTypes(), obtenerRolesDeRutas()])
+      .then(([todas, tipos, roles]) => {
         setRutas(todas)
         setAccessTypes(tipos)
+        setRolesDisponibles(roles)
       })
       .catch((err) => setError(mensajeDe(err, 'No se pudo cargar la configuración')))
       .finally(() => setCargando(false))
   }, [])
+
+  // Al cerrar el registro de roles se recarga la lista (puede haber roles nuevos)
+  const cerrarRoles = () => {
+    setMostrarRoles(false)
+    obtenerRolesDeRutas().then(setRolesDisponibles).catch(() => {})
+  }
+
+  const nombreRol = (codigo: string) => rolesDisponibles.find((r) => r.codigo === codigo)?.nombre ?? codigo
+  // Los roles aplican a rutas publicas y privadas (no a las de solo invitado)
+  const codigoAcceso = accessTypes.find((t) => t.id === form.accessType)?.codigo
+  const aplicanRoles = codigoAcceso === ACCESO.PRIVADA || codigoAcceso === ACCESO.PUBLICA
+  // Casilla "Restringir por roles": desmarcarla quita la restriccion de una ruta que ya tenia roles
+  const [restringirRoles, setRestringirRoles] = useState(false)
 
   // Recarga la tabla y las rutas de la aplicacion para que el cambio aplique de inmediato
   const refrescar = async () => {
@@ -58,6 +86,7 @@ export default function ConfiguracionRutas() {
   const limpiar = () => {
     setForm(VACIO)
     setEditandoId(null)
+    setRestringirRoles(false)
   }
 
   const editar = (ruta: Ruta) => {
@@ -67,16 +96,18 @@ export default function ConfiguracionRutas() {
       titulo: ruta.titulo ?? '',
       accessType: ruta.accessType?.id ?? '',
       activo: ruta.activo,
+      roles: ruta.roles ?? [],
     })
+    setRestringirRoles((ruta.roles?.length ?? 0) > 0)
     setEditandoId(ruta.id)
     setError(null)
     setMensaje(null)
   }
 
   // Login y ConfiguracionRutas: quitarlos o restringirlos puede dejar la app sin acceso
-  const confirmarSiEsCritica = (componente: string, accion: string) =>
+  const confirmarSiEsCritica = async (componente: string, accion: string) =>
     !COMPONENTES_CRITICOS.includes(componente)
-    || window.confirm(`La ruta del componente ${componente} es necesaria para ${componente === 'Login' ? 'iniciar sesión' : 'volver a configurar las rutas'}. ¿Seguro que quieres ${accion}?`)
+    || await confirmar(`La ruta del componente ${componente} es necesaria para ${componente === 'Login' ? 'iniciar sesión' : 'volver a configurar las rutas'}. ¿Seguro que quieres ${accion}?`)
 
   const guardar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault()
@@ -95,16 +126,22 @@ export default function ConfiguracionRutas() {
       return
     }
 
+    if (aplicanRoles && restringirRoles && form.roles.length === 0) {
+      setError('Elige al menos un rol o desmarca "Restringir por roles"')
+      return
+    }
+
     const tipo = accessTypes.find((t) => t.id === form.accessType)
     const esperado = form.componente === 'Login' ? ACCESO.SOLO_INVITADO : ACCESO.PRIVADA
     const restringe = !form.activo || (COMPONENTES_CRITICOS.includes(form.componente) && tipo?.codigo !== esperado)
-    if (restringe && !confirmarSiEsCritica(form.componente, 'guardarla así')) {
+    if (restringe && !(await confirmarSiEsCritica(form.componente, 'guardarla así'))) {
       return
     }
 
     setGuardando(true)
     try {
-      const datos = { ...form, path }
+      // Sin "Restringir por roles" (o en rutas de solo invitado) se guardan sin roles
+      const datos = { ...form, path, roles: aplicanRoles && restringirRoles ? form.roles : [] }
       if (editandoId) {
         await actualizarRuta(editandoId, datos)
         setMensaje(`Ruta ${path} actualizada`)
@@ -122,7 +159,7 @@ export default function ConfiguracionRutas() {
   }
 
   const borrar = async (ruta: Ruta) => {
-    if (!window.confirm(`¿Eliminar la ruta ${ruta.path}?`) || !confirmarSiEsCritica(ruta.componente, 'eliminarla')) {
+    if (!(await confirmar(`¿Eliminar la ruta ${ruta.path}?${COMPONENTES_CRITICOS.includes(ruta.componente) ? ' Esta ruta es necesaria para acceder a la aplicación o configurar sus rutas.' : ''}`))) {
       return
     }
     setError(null)
@@ -168,9 +205,18 @@ export default function ConfiguracionRutas() {
   return (
     <main className="contenido">
       <ConfiguracionLogo />
+      <ConfiguracionApariencia />
       <ConfiguracionInicio rutas={rutas} />
 
-      <h1>Configuración de rutas</h1>
+      <div className="configuracion-cabecera">
+        <h1>Configuración de rutas</h1>
+        <div className="acciones-form">
+          <button type="button" className="secundario" onClick={() => setMostrarAuditoria(true)}>Ver auditoría</button>
+          <button type="button" onClick={() => setMostrarRoles(true)}>Registrar rol</button>
+        </div>
+      </div>
+      {mostrarRoles && <ModalRoles onCerrar={cerrarRoles} />}
+      {mostrarAuditoria && <ModalAuditoria onCerrar={() => setMostrarAuditoria(false)} />}
 
       {error && <p className="alerta alerta-error" role="alert">{error}</p>}
       {mensaje && <p className="alerta alerta-info" role="status">{mensaje}</p>}
@@ -202,6 +248,22 @@ export default function ConfiguracionRutas() {
             {accessTypes.map((t) => <option key={t.id} value={t.id} title={t.descripcion ?? undefined}>{t.nombre}</option>)}
           </select>
         </div>
+        {aplicanRoles && (
+          <label className="campo-check" title="Si la desmarcas, la vista deja de depender de roles">
+            <input type="checkbox" checked={restringirRoles} onChange={(e) => setRestringirRoles(e.target.checked)} />
+            Restringir por roles
+          </label>
+        )}
+        {aplicanRoles && restringirRoles && (
+          <SeleccionMultiple
+            id="ruta-roles"
+            etiqueta="Roles que pueden ver y ejecutar"
+            opciones={rolesDisponibles.map((r) => ({ valor: r.codigo, texto: `${r.nombre} · ${r.codigo}` }))}
+            seleccion={form.roles}
+            onCambio={(roles) => cambiar('roles', roles)}
+            textoTodos="Selecciona…"
+          />
+        )}
         <label className="campo-check">
           <input type="checkbox" checked={form.activo} onChange={(e) => cambiar('activo', e.target.checked)} />
           Activa
@@ -222,6 +284,7 @@ export default function ConfiguracionRutas() {
               <th>Componente</th>
               <th>Título</th>
               <th>Acceso</th>
+              <th>Roles</th>
               <th>Orden</th>
               <th>Estado</th>
               <th aria-label="Acciones"></th>
@@ -237,6 +300,11 @@ export default function ConfiguracionRutas() {
                 </td>
                 <td>{r.titulo}</td>
                 <td>{r.accessType?.nombre ?? '—'}</td>
+                <td>
+                  {r.accessType?.codigo === ACCESO.SOLO_INVITADO ? <span className="vacio">No aplica</span>
+                    : r.roles?.length ? r.roles.map(nombreRol).join(', ')
+                      : 'Sin restricción'}
+                </td>
                 <td>
                   <div className="orden">
                     <span>{r.orden}</span>

@@ -1,18 +1,18 @@
 :root {
-  --text: #4b4757;
-  --text-h: #08060d;
-  --bg: #f6f6f8;
-  --surface: #fff;
-  --border: #e2e1e6;
-  --accent: #5b3bd6;
-  --accent-text: #fff;
-  --error-bg: #fdecec;
-  --error-text: #a12424;
-  --info-bg: #ecf2fd;
-  --info-text: #1f4d99;
-  --ok: #1d7a46;
-  --warn: #9a6200;
-  --fail: #b42323;
+  --text: CanvasText;
+  --text-h: CanvasText;
+  --bg: Canvas;
+  --surface: Canvas;
+  --border: ButtonBorder;
+  --accent: ButtonFace;
+  --accent-text: ButtonText;
+  --error-bg: Canvas;
+  --error-text: CanvasText;
+  --info-bg: Canvas;
+  --info-text: CanvasText;
+  --ok: CanvasText;
+  --warn: CanvasText;
+  --fail: CanvasText;
   --shadow: rgba(0, 0, 0, 0.08) 0 8px 24px -6px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -26,19 +26,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #b4b1bd;
-    --text-h: #f3f3f6;
-    --bg: #15151a;
-    --surface: #1e1e25;
-    --border: #2f2f3a;
-    --accent: #8f74ff;
-    --error-bg: #3a1c1f;
-    --error-text: #f2a6a6;
-    --info-bg: #1b2740;
-    --info-text: #a9c4f5;
-    --ok: #5fd08f;
-    --warn: #f0b54a;
-    --fail: #f08080;
+    --text: CanvasText;
+    --text-h: CanvasText;
+    --bg: Canvas;
+    --surface: Canvas;
+    --border: ButtonBorder;
+    --accent: ButtonFace;
+    --error-bg: Canvas;
+    --error-text: CanvasText;
+    --info-bg: Canvas;
+    --info-text: CanvasText;
+    --ok: CanvasText;
+    --warn: CanvasText;
+    --fail: CanvasText;
   }
 }
 
@@ -595,6 +595,35 @@ tr.fila-editando td {
   opacity: 0;
 }
 
+/* Totales por estado que funcionan como filtro (Eventos de rechazos) */
+.filtro-estado {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.filtro-estado:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.filtro-estado.activo {
+  border-color: var(--accent);
+  background: var(--info-bg);
+  color: var(--text-h);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.enlace-filtro {
+  padding: 4px 6px;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
 /* Facturas: cuantas de las buscadas se encontraron */
 .insignia {
   display: inline-block;
@@ -695,6 +724,22 @@ tr.fila-editando td {
   margin-bottom: 16px;
 }
 
+.subtitulo-modal {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  color: var(--text-h);
+}
+
+.modal .ayuda {
+  margin: 0 0 12px;
+}
+
+.separador {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
 .modal-cabecera h2 {
   margin: 0;
   font-size: 1.25rem;
@@ -704,7 +749,8 @@ tr.fila-editando td {
 .totales {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 12px;
   padding: 0;
   list-style: none;
@@ -784,5 +830,389 @@ td.respuesta {
 
   .tarjeta {
     padding: 24px;
+  }
+}
+
+/* Registro de roles */
+.configuracion-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.contenido .configuracion-cabecera h1 { margin: 0; }
+.modal-roles { width: min(760px, calc(100vw - 32px)); }
+.rol-formulario { border: 0; padding: 0; margin: 0; min-width: 0; }
+.rol-datos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.rol-permisos { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 0; min-width: 0; }
+.rol-permisos legend { color: var(--text-h); font-weight: 600; padding: 0 6px; }
+.rol-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+.rol-acciones .campo-check { margin: 0; font-weight: 400; align-items: flex-start; }
+.rol-acciones input { margin-top: 4px; accent-color: var(--accent); flex-shrink: 0; }
+.rol-pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.rol-registrados { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 16px; }
+.rol-registrados h3 { margin: 0 0 12px; font-size: 1rem; color: var(--text-h); }
+@media (max-width: 600px) {
+  .rol-datos, .rol-acciones { grid-template-columns: 1fr; }
+}
+
+.servicios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-top: 20px; }
+.servicio-tarjeta { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.servicio-titulo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.servicio-titulo h2 { font-size: 1.05rem; color: var(--text-h); margin: 0; }
+.servicio-tarjeta p { font-size: .9rem; }
+.servicio-estado { font-size: .8rem; border-radius: 999px; padding: 3px 10px; background: var(--bg); font-weight: 600; }
+.servicio-disponible { color: var(--ok); }
+.servicio-error, .servicio-desconectado { color: var(--fail); background: var(--error-bg); }
+.servicio-ejecutando, .servicio-programado { color: var(--info-text); background: var(--info-bg); }
+.servicio-sin_configurar, .servicio-conectando { color: var(--warn); }
+
+.servicio-no_autorizado, .servicio-acceso_denegado, .servicio-sin_conexion, .servicio-tiempo_agotado { color: var(--fail); background: var(--error-bg); }
+.servicio-limitado { color: var(--warn); }
+
+/* Botones de ayuda (components/Ayuda.tsx) */
+.cabecera-ayuda {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.titulo-con-ayuda {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.titulo-con-ayuda h1 {
+  margin-bottom: 0;
+}
+
+.contenido > .titulo-con-ayuda {
+  margin-bottom: 20px;
+}
+
+.boton-ayuda {
+  position: relative;
+  display: inline-block;
+}
+
+.boton-ayuda summary {
+  list-style: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.boton-ayuda summary::-webkit-details-marker {
+  display: none;
+}
+
+.boton-ayuda summary:hover,
+.boton-ayuda[open] summary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.boton-ayuda summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel-ayuda {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(460px, calc(100vw - 32px));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text);
+  text-align: left;
+}
+
+.titulo-con-ayuda .panel-ayuda {
+  left: 0;
+  right: auto;
+}
+
+.panel-ayuda-titulo {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  color: var(--text-h);
+}
+
+.panel-ayuda p {
+  margin: 0 0 10px;
+}
+
+.panel-ayuda h4 {
+  margin: 14px 0 6px;
+  font-size: 0.85rem;
+  color: var(--text-h);
+}
+
+.lista-estados {
+  margin: 0 0 10px;
+}
+
+.lista-estados > div {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lista-estados > div:last-child {
+  border-bottom: 0;
+}
+
+.lista-estados dt {
+  margin: 0;
+}
+
+.lista-estados dd {
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .lista-estados > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .titulo-con-ayuda .panel-ayuda {
+    left: auto;
+    right: 0;
+  }
+}
+
+/* Campo bloqueado, ej. el codigo de un rol en edicion */
+input[readonly] {
+  background: var(--bg);
+  color: var(--text);
+  cursor: not-allowed;
+}
+
+/* Motivo por el que un boton esta deshabilitado */
+.motivos-deshabilitado {
+  margin: -16px 0 16px;
+  padding: 8px 12px 8px 28px;
+  border-radius: 8px;
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-size: 0.85rem;
+}
+
+.texto-error {
+  color: var(--error-text);
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--fail);
+}
+
+.modal-auditoria { width: min(1180px, calc(100vw - 32px)); }
+.auditoria-endpoint { max-width: 320px; overflow-wrap: anywhere; }
+
+/* ---------- Responsive: ajustes para tablet y celular ---------- */
+
+/* Las filas de botones bajan a otra linea en vez de salirse de la pantalla */
+.acciones-form {
+  flex-wrap: wrap;
+}
+
+/* Desplegable de empresas/estados: nunca mas ancho que la pantalla; nombres largos en varias lineas */
+.multiselect-opciones {
+  max-width: min(520px, calc(100vw - 32px));
+}
+
+.multiselect-opciones .campo-check {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  /* Barra superior: marca y usuario arriba; el menu en una sola fila desplazable debajo */
+  .barra {
+    padding: 10px 16px;
+    gap: 8px 12px;
+  }
+
+  .menu {
+    order: 3;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    margin-right: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .menu a {
+    white-space: nowrap;
+  }
+
+  .barra-usuario {
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  .barra-usuario span {
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Panel de ayuda: ocupa el ancho de la pantalla en vez de colgar del boton */
+  .panel-ayuda,
+  .titulo-con-ayuda .panel-ayuda {
+    position: fixed;
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-height: calc(100vh - 96px);
+  }
+
+  /* Botones de formulario a todo el ancho para tocarlos facil */
+  .busqueda .acciones-form > button,
+  .form-rutas .acciones-form > button {
+    flex: 1 1 auto;
+  }
+
+  .modal {
+    padding: 16px;
+  }
+}
+
+/* Frecuencia de la limpieza: numero + unidad en una sola linea */
+.frecuencia {
+  display: flex;
+  gap: 8px;
+}
+
+.frecuencia input {
+  flex: 1 1 80px;
+  min-width: 0;
+}
+
+.frecuencia select {
+  flex: 0 1 110px;
+  width: auto;
+}
+
+.modal-confirmacion { width: min(480px, calc(100vw - 32px)); padding: 24px; background: var(--surface); }
+.confirmacion-mensaje { margin: 0 0 24px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-line; }
+.confirmacion-acciones { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+
+/* Toasts globales, sin desplazar contenido y visibles sobre modales. */
+.toast-contenedor { position: fixed; inset: 16px 16px auto auto; margin: 0; padding: 0; border: 0; background: transparent; color: var(--text-h); width: min(390px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; pointer-events: none; }
+.toast-contenedor::backdrop { background: transparent; pointer-events: none; }
+.toast { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); pointer-events: auto; }
+.toast p { margin: 4px 0 0; font-size: .9rem; overflow-wrap: anywhere; }
+.toast button { padding: 0 7px; font-size: 1.2rem; }
+.toast-exito { border-left-color: var(--ok); }
+.toast-error { border-left-color: var(--fail); }
+.toast-aviso { border-left-color: var(--warn); }
+
+/* Apariencia configurada: las variables adicionales solo se definen al guardar un tema. */
+button.secundario { background: var(--secondary-bg, ButtonFace); color: var(--secondary-text, ButtonText); }
+form { color: var(--form-text, CanvasText); background-color: var(--form-bg, Canvas); }
+.form-rutas, .busqueda, .form-inicio { background-color: var(--form-bg, Canvas); }
+form label, form legend { color: var(--form-text, CanvasText); }
+input, select, textarea { background-color: var(--field-bg, Field); color: var(--field-text, FieldText); }
+.tema-campos { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; border: 0; padding: 0; margin: 16px 0; }
+.tema-color { display: flex; gap: 8px; align-items: center; }
+.tema-color span { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; flex-shrink: 0; }
+.conexion-tiempo-real { font-size: .75rem; }
+.carga-inicial { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; background: var(--bg); }
+.carga-emblema { position: relative; display: grid; place-items: center; width: 200px; height: 200px; }
+.carga-emblema img { max-width: 150px; max-height: 100px; object-fit: contain; animation: logo-entrada .8s ease-out both; }
+.carga-orbita { position: absolute; inset: 0; border: 2px solid var(--border); border-top: 3px solid currentColor; border-radius: 50%; animation: orbita 1.6s linear infinite; }
+.carga-puntos { animation: respirar 1.2s ease-in-out infinite; }
+@keyframes orbita { to { transform: rotate(360deg); } }
+@keyframes logo-entrada { from { opacity: 0; transform: scale(.75) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes respirar { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .carga-emblema img, .carga-orbita, .carga-puntos { animation: none; } }
+
+.tema-selector { position: relative; display: grid; place-items: center; width: 36px; height: 36px; margin: 0; flex: 0 0 36px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; overflow: hidden; }
+.tema-selector input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; opacity: 0; cursor: pointer; }
+.tema-selector:focus-within { outline: 2px solid var(--text-h); outline-offset: 3px; }
+.tema-color .tema-selector span { width: auto; height: auto; border: 0; font-size: 1.2rem; pointer-events: none; }
+
+/* Logo configurado durante la navegacion, sin volver a cargar su configuracion. */
+.transicion-ruta { position: fixed; inset: 0; z-index: 1000; background: var(--bg); pointer-events: none; }
+.transicion-ruta .carga-inicial { height: 100%; min-height: 100%; }
+
+/* Durante la autenticacion la capa evita nuevos clics en el formulario. */
+.transicion-sesion { pointer-events: auto; }
+
+/* Tiempo de eliminacion de la auditoria (components/RetencionAuditoria.tsx) */
+.retencion-auditoria {
+  margin: 8px 0 20px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.retencion-auditoria td select,
+.retencion-auditoria td input[type='number'] {
+  min-width: 120px;
+}
+
+.retencion-acciones {
+  margin-top: 12px;
+}
+
+.retencion-motivos {
+  margin: 12px 0 8px;
+}
+
+tr.fila-error td {
+  background: var(--error-bg);
+}
+
+/* Seleccion multiple dentro de la tabla de retencion: sin etiqueta repetida en cada fila */
+.tabla-retencion .celda-componentes {
+  min-width: 260px;
+}
+
+.tabla-retencion .celda-componentes .campo > .etiqueta,
+.tabla-retencion .celda-componentes .campo > label:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* En pantallas anchas la lista desplegable no queda cortada por el scroll de la tabla;
+   en celular se mantiene el scroll horizontal para que la tabla no se salga */
+@media (min-width: 761px) {
+  .tabla-retencion {
+    overflow: visible;
   }
 }

@@ -12,6 +12,7 @@ export default defineConfig({
     // En desarrollo, /api se reenvia al backend (server-bus/backend, PORT=8080)
     proxy: {
       '/api': 'http://localhost:8080',
+      '/socket.io': { target: 'http://localhost:8080', ws: true },
     },
   },
 })

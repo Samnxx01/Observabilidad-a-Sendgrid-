@@ -1,3 +1,5 @@
+import { useRespuestaTiempoReal } from './useRespuestaTiempoReal.ts'
+import { useConfirmar } from './useConfirmar.ts'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   actualizarBase,
@@ -31,8 +33,10 @@ const formatoDia = (dia: string) => dia.split('-').reverse().join('/')
 // Bases de Azure SQL que se auditan en SendGrid y desde que fecha (coleccion basesauditoria).
 // Reemplaza SQL_DATABASES y FECHAINITIAL del .env.
 export default function ModalBasesAuditoria({ onCerrar }: { onCerrar: () => void }) {
+  const confirmar = useConfirmar()
   const dialogo = useRef<HTMLDialogElement>(null)
   const [bases, setBases] = useState<BaseAuditoria[]>([])
+  useRespuestaTiempoReal<{bases: BaseAuditoria[]}>('/sendgrid/auditoria/bases', datos => setBases(datos.bases))
   const [form, setForm] = useState<DatosBase>(VACIO)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -90,7 +94,7 @@ export default function ModalBasesAuditoria({ onCerrar }: { onCerrar: () => void
   }
 
   const borrar = async (base: BaseAuditoria) => {
-    if (!window.confirm(`¿Quitar ${base.baseDatos} de la auditoría? Los rechazos ya guardados se conservan.`)) {
+    if (!await confirmar(`¿Quitar ${base.baseDatos} de la auditoría? Los rechazos ya guardados se conservan.`)) {
       return
     }
     setError(null)

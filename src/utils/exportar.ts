@@ -1,3 +1,4 @@
+import { notificar } from './toast.ts'
 import { guardarArchivo } from './descargas.ts'
 
 export type Formato = 'excel' | 'pdf'
@@ -92,5 +93,12 @@ const exportarPdf = async <T>({ nombre, titulo, detalle, columnas, filas }: Expo
   guardarArchivo(documento.output('blob'), `${nombre}.pdf`)
 }
 
-export const exportarArchivo = <T>(formato: Formato, exportacion: Exportacion<T>) =>
-  formato === 'excel' ? exportarExcel(exportacion) : exportarPdf(exportacion)
+export const exportarArchivo = async <T>(formato: Formato, exportacion: Exportacion<T>) => {
+  try {
+    await (formato === 'excel' ? exportarExcel(exportacion) : exportarPdf(exportacion))
+    notificar('Archivo ' + (formato === 'excel' ? 'Excel' : 'PDF') + ' generado correctamente')
+  } catch (error) {
+    notificar(error instanceof Error ? error.message : 'No se pudo exportar el archivo', 'error')
+    throw error
+  }
+}

@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useRespuestaTiempoReal } from '../components/useRespuestaTiempoReal.ts'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   consultarRechazos,
   exportarRechazos,
@@ -12,9 +13,12 @@ import {
 } from '../api/auditoria.ts'
 import MenuExportar from '../components/MenuExportar.tsx'
 import ModalBasesAuditoria from '../components/ModalBasesAuditoria.tsx'
+import ModalWatcher from '../components/ModalWatcher.tsx'
 import SeleccionMultiple from '../components/SeleccionMultiple.tsx'
 import { separarValores } from '../utils/descargas.ts'
 import { exportarArchivo, type Columna, type Formato } from '../utils/exportar.ts'
+import { AyudaAuditoria } from '../components/AyudasEstados.tsx'
+import { describirEstadoSendgrid } from '../utils/estados.ts'
 
 const ESTADOS = ['deferred', 'bounced', 'blocked', 'dropped'] as const
 const POR_PAGINA = 5
@@ -75,11 +79,13 @@ export default function Auditoria() {
   // Filtros de la ultima busqueda: la paginacion y la exportacion usan estos, no lo que se este escribiendo
   const [aplicados, setAplicados] = useState<FiltrosRechazos | null>(null)
   const [resultado, setResultado] = useState<RespuestaRechazos | null>(null)
+  useRespuestaTiempoReal<RespuestaRechazos>('/sendgrid/auditoria', setResultado)
   const [aviso, setAviso] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
   const [sincronizando, setSincronizando] = useState(false)
   const [verBases, setVerBases] = useState(false)
+  const [verWatcher, setVerWatcher] = useState(false)
   const [empresas, setEmpresas] = useState<BaseAuditoria[]>([])
 
   // Empresas de las bases configuradas (basesauditoria) para el filtro de empresa
@@ -102,17 +108,27 @@ export default function Auditoria() {
     hasta: hasta || undefined,
   })
 
+  // Se pueden lanzar varias busquedas seguidas (ej. cambiar filtros mientras carga o sincroniza):
+  // solo se muestra la respuesta de la ultima, aunque una anterior llegue despues
+  const ultimaConsulta = useRef(0)
+  const ultimosFiltros = useRef<FiltrosRechazos | null>(null)
+
   const consultar = async (filtros: FiltrosRechazos, pagina: number) => {
+    const numero = ++ultimaConsulta.current
+    ultimosFiltros.current = filtros
     setError(null)
     setCargando(true)
     try {
-      setResultado(await consultarRechazos(filtros, pagina, POR_PAGINA))
+      const respuesta = await consultarRechazos(filtros, pagina, POR_PAGINA)
+      if (numero !== ultimaConsulta.current) return
+      setResultado(respuesta)
       setAplicados(filtros)
     } catch (err) {
+      if (numero !== ultimaConsulta.current) return
       setResultado(null)
       setError(mensajeDe(err, 'No se pudo consultar'))
     } finally {
-      setCargando(false)
+      if (numero === ultimaConsulta.current) setCargando(false)
     }
   }
 
@@ -188,7 +204,8 @@ export default function Auditoria() {
         : `Sincronizado: ${sumar(resultados, 'insertados')} nuevo(s), `
           + `${sumar(resultados, 'actualizados')} actualizado(s), `
           + `${sumar(resultados, 'deferredResueltos')} deferred resuelto(s).`)
-      await consultar(leerFiltros(), 1)
+      // Refresca con los filtros mas recientes (pudieron cambiar mientras sincronizaba)
+      await consultar(ultimosFiltros.current ?? leerFiltros(), 1)
       const fallidas = resultados.filter((r) => r.error)
       if (fallidas.length > 0) {
         setError(fallidas.map((r) => `${r.baseDatos}: ${r.error}`).join(' · '))
@@ -200,7 +217,6 @@ export default function Auditoria() {
     }
   }
 
-  const ocupado = cargando || sincronizando
   const paginas = resultado ? Math.max(1, Math.ceil(resultado.total / resultado.porPagina)) : 1
   const variasEmpresas = resultado && resultado.empresas.length !== 1
   const titulo = !resultado || resultado.empresas.length === 0
@@ -211,6 +227,7 @@ export default function Auditoria() {
 
   return (
       <main className="contenido">
+        <div className="cabecera-ayuda"><AyudaAuditoria /></div>
         <form className="busqueda" onSubmit={alEnviar}>
           <SeleccionMultiple
             id="estados"
@@ -218,7 +235,7 @@ export default function Auditoria() {
             opciones={OPCIONES_ESTADO}
             seleccion={estados}
             onCambio={cambiarEstados}
-            disabled={ocupado}
+           
           />
           <SeleccionMultiple
             id="empresas"
@@ -230,7 +247,7 @@ export default function Auditoria() {
             seleccion={nits}
             onCambio={cambiarNits}
             textoTodos="Todas las empresas"
-            disabled={ocupado}
+           
           />
           <div className="campo">
             <label htmlFor="facturas">Facturas (opcional)</label>
@@ -251,30 +268,36 @@ export default function Auditoria() {
             <input id="hasta" type="date" value={hasta} min={desde} onChange={(e) => setHasta(e.target.value)} />
           </div>
           <div className="acciones-form">
-            <button type="submit" disabled={ocupado}>
+            <button type="submit">
               {cargando ? 'Buscando…' : 'Buscar'}
             </button>
             <button
               type="button"
               className="secundario"
               onClick={sincronizar}
-              disabled={ocupado}
+              disabled={sincronizando}
               title="Trae de SendGrid los rechazos nuevos (de las empresas elegidas, o de todas las activas)"
             >
               {sincronizando ? 'Sincronizando…' : 'Sincronizar'}
             </button>
-            <MenuExportar onExportar={exportar} disabled={ocupado || !resultado || resultado.total === 0} />
+            <MenuExportar onExportar={exportar} disabled={!resultado || resultado.total === 0} />
             <button type="button" className="secundario" onClick={() => setVerBases(true)}>
               Bases
+            </button>
+            <button type="button" className="secundario" onClick={() => setVerWatcher(true)}
+              title="Sincronización automática (SendGrid → MongoDB → New Relic) y eliminación de registros antiguos">
+              Programación
             </button>
           </div>
         </form>
 
         {verBases && <ModalBasesAuditoria onCerrar={cerrarBases} />}
+        {verWatcher && <ModalWatcher onCerrar={() => setVerWatcher(false)} />}
 
         {sincronizando && (
           <p className="alerta alerta-info" role="status">
-            Consultando SendGrid y guardando en MongoDB. Puede tardar varios minutos.
+            Consultando SendGrid y guardando en MongoDB. Puede tardar varios minutos; mientras tanto puedes seguir
+            buscando y filtrando.
           </p>
         )}
         {aviso && <p className="alerta alerta-info" role="status">{aviso}</p>}
@@ -283,12 +306,36 @@ export default function Auditoria() {
         {resultado && (
           <section>
             <p className="resumen">{titulo} · {resultado.total} rechazo(s)</p>
-            <ul className="totales">
-              {ESTADOS.map((e) => (
-                <li key={e}>
-                  <span className={`estado estado-${e}`}>{e}</span> {resultado.totales[e] ?? 0}
+            {/* Totales por estado (sin el filtro de estado): cada uno filtra la tabla al hacer clic */}
+            <ul className="totales" aria-label="Filtrar por estado">
+              {OPCIONES_ESTADO.map(({ valor, texto }) => {
+                const activo = estados.includes(valor)
+                return (
+                  <li key={valor}>
+                    <button
+                      type="button"
+                      className={`filtro-estado${activo ? ' activo' : ''}`}
+                      aria-pressed={activo}
+                      onClick={() => cambiarEstados(activo ? estados.filter((e) => e !== valor) : [...estados, valor])}
+                     
+                      title={activo ? 'Quitar este filtro' : `Ver solo ${texto}`}
+                    >
+                      <span
+                        className={`estado estado-${valor === PENDIENTES ? 'deferred' : valor}`}
+                        title={valor === PENDIENTES ? 'Rechazos temporales que todavía no se resuelven' : describirEstadoSendgrid(valor)}
+                      >{texto}</span>
+                      {' '}{resultado.totales[valor] ?? 0}
+                    </button>
+                  </li>
+                )
+              })}
+              {estados.length > 0 && (
+                <li>
+                  <button type="button" className="enlace-filtro" onClick={() => cambiarEstados([])}>
+                    Quitar filtro de estado
+                  </button>
                 </li>
-              ))}
+              )}
             </ul>
             {resultado.registros.length === 0 ? (
               <p className="vacio">No hay rechazos para esta búsqueda.</p>
@@ -316,7 +363,7 @@ export default function Auditoria() {
                           {variasEmpresas && <td>{r.razonSocial ?? r.nit}<br />{r.nit}</td>}
                           <td>{r.factura}</td>
                           <td>{r.toEmail}</td>
-                          <td><span className={`estado estado-${r.estado}`}>{r.estado}</span></td>
+                          <td><span className={`estado estado-${r.estado}`} title={describirEstadoSendgrid(r.estado)}>{r.estado}</span></td>
                           <td>{r.tipoFalla}</td>
                           <td>{r.codigoSmtp}</td>
                           <td className="respuesta">
@@ -325,7 +372,7 @@ export default function Auditoria() {
                           <td>
                             {r.estado !== 'deferred' ? '' : r.estadoResolucion ? (
                               <>
-                                <span className={`estado estado-${r.estadoResolucion}`}>{r.estadoResolucion}</span>
+                                <span className={`estado estado-${r.estadoResolucion}`} title={describirEstadoSendgrid(r.estadoResolucion)}>{r.estadoResolucion}</span>
                                 <br />{fecha(r.fechaResolucion)}
                               </>
                             ) : <span className="estado estado-deferred">Pendiente</span>}

@@ -1,3 +1,4 @@
+import { EstadoConexion } from './TiempoReal.tsx'
 import { NavLink, Outlet } from 'react-router'
 import { useAuth } from '../auth/useAuth.ts'
 import { ACCESO } from '../rutas/accesos.ts'
@@ -24,6 +25,7 @@ export default function Layout() {
           ))}
         </nav>
         <div className="barra-usuario">
+          <EstadoConexion />
           <span>{usuario?.correo}</span>
           <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
         </div>

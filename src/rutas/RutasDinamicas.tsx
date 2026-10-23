@@ -1,5 +1,7 @@
+import CargaInicial from '../components/CargaInicial.tsx'
+import TransicionRuta from '../components/TransicionRuta.tsx'
 import { createElement, Suspense } from 'react'
-import { Link, Navigate, Route, Routes } from 'react-router'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import type { Ruta } from '../api/rutas.ts'
 import { useAuth } from '../auth/useAuth.ts'
 import Layout from '../components/Layout.tsx'
@@ -9,7 +11,7 @@ import { RequiereSesion, SoloInvitado } from './Guardias.tsx'
 import { useRutas } from './useRutas.ts'
 import { useRutaInicio } from '../sitio/inicio.ts'
 
-const Cargando = () => <p className="cargando" role="status">Cargando…</p>
+const Cargando = CargaInicial
 
 function ComponenteNoRegistrado({ nombre }: { nombre: string }) {
   return (
@@ -24,7 +26,7 @@ function NoEncontrada() {
     <main className="login">
       <div className="tarjeta">
         <h1>Página no encontrada</h1>
-        <p className="subtitulo">La ruta no existe o no está activa.</p>
+        <p className="subtitulo">La ruta no existe, no está activa o tu rol no tiene acceso a ella.</p>
         <Link to="/">Ir al inicio</Link>
       </div>
     </main>
@@ -59,6 +61,7 @@ const elemento = (ruta: Ruta) => {
 // Construye las rutas del frontend a partir de la coleccion rutasseguridad
 export default function RutasDinamicas() {
   const { rutas, cargando, error } = useRutas()
+  const { pathname } = useLocation()
 
   if (cargando) {
     return <Cargando />
@@ -69,25 +72,33 @@ export default function RutasDinamicas() {
 
   const conAcceso = (codigo: string) => rutas.filter((r) => r.accessType?.codigo === codigo)
   const aRoute = (r: Ruta) => <Route key={r.id} path={r.path} element={elemento(r)} />
+  // Una publica con roles necesita saber el rol: pide sesion (sin el menu de las privadas)
+  const publicas = conAcceso(ACCESO.PUBLICA)
+  const publicasConRoles = publicas.filter((r) => r.roles?.length)
+  const publicasAbiertas = publicas.filter((r) => !r.roles?.length)
 
   return (
+    <>
+    <TransicionRuta key={pathname} />
     <Suspense fallback={<Cargando />}>
       <Routes>
         <Route element={<RequiereSesion />}>
           <Route element={<Layout />}>
             {conAcceso(ACCESO.PRIVADA).map(aRoute)}
           </Route>
+          {publicasConRoles.map(aRoute)}
         </Route>
 
         <Route element={<SoloInvitado />}>
           {conAcceso(ACCESO.SOLO_INVITADO).map(aRoute)}
         </Route>
 
-        {conAcceso(ACCESO.PUBLICA).map(aRoute)}
+        {publicasAbiertas.map(aRoute)}
 
         {!rutas.some((r) => r.path === '/') && <Route path="/" element={<Inicio />} />}
         <Route path="*" element={<NoEncontrada />} />
       </Routes>
     </Suspense>
+    </>
   )
 }

@@ -5,10 +5,8 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider.tsx'
 import { RutasProvider } from './rutas/RutasProvider.tsx'
-import { cargarSitio } from './sitio/sitio.ts'
 
 // Logo (barra, login y favicon) y pagina despues del login; no bloquea el arranque
-cargarSitio()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

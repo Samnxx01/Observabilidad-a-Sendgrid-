@@ -14,6 +14,8 @@ export interface Ruta {
   titulo: string | null
   orden: number
   activo: boolean
+  // Roles que ven la ruta (vacio = todos los usuarios con sesion); solo aplica a rutas privadas
+  roles: string[]
   accessType: Pick<AccessType, 'id' | 'codigo' | 'nombre'> | null
 }
 
@@ -24,7 +26,17 @@ export interface DatosRuta {
   titulo: string
   accessType: string
   activo: boolean
+  roles: string[]
 }
+
+export interface RolDisponible {
+  codigo: string
+  nombre: string
+}
+
+// Roles que se pueden asignar a una ruta (requiere 'Administrar rutas')
+export const obtenerRolesDeRutas = () =>
+  api<{ roles: RolDisponible[] }>('/rutas/roles').then((r) => r.roles)
 
 // Rutas activas (publico: se necesitan antes de iniciar sesion)
 export const obtenerRutasActivas = () =>

@@ -1,7 +1,10 @@
+import { useRespuestaTiempoReal } from '../components/useRespuestaTiempoReal.ts'
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/cliente.ts'
 import { obtenerBases, type BaseAuditoria } from '../api/auditoria.ts'
+import { AyudaFacturas } from '../components/AyudasEstados.tsx'
 import MenuExportar from '../components/MenuExportar.tsx'
+import { describirEstadoSendgrid } from '../utils/estados.ts'
 import SeleccionMultiple from '../components/SeleccionMultiple.tsx'
 import { separarValores } from '../utils/descargas.ts'
 import { exportarArchivo, type Columna, type Formato } from '../utils/exportar.ts'
@@ -50,6 +53,7 @@ export default function Facturas() {
   const [facturas, setFacturas] = useState('')
   const [estados, setEstados] = useState<string[]>([])
   const [resultado, setResultado] = useState<RespuestaFacturas | null>(null)
+  useRespuestaTiempoReal<RespuestaFacturas>('/sendgrid/facturas', setResultado)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
   const [empresas, setEmpresas] = useState<BaseAuditoria[]>([])
@@ -126,6 +130,7 @@ export default function Facturas() {
 
   return (
     <main className="contenido">
+      <div className="cabecera-ayuda"><AyudaFacturas /></div>
       <form className="busqueda" onSubmit={buscar}>
         <SeleccionMultiple
           id="empresas"
@@ -210,7 +215,7 @@ export default function Facturas() {
                       {resultado.empresas.length > 1 && <td>{parteAsunto(m, 1)}<br />{parteAsunto(m, 0)}</td>}
                       <td>{parteAsunto(m, 2)}</td>
                       <td>{m.to_email}</td>
-                      <td><span className={`estado estado-${m.status}`}>{m.status}</span></td>
+                      <td><span className={`estado estado-${m.status}`} title={describirEstadoSendgrid(m.status)}>{m.status}</span></td>
                       <td className="respuesta">{m.reason}</td>
                     </tr>
                   ))}

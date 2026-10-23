@@ -1,6 +1,10 @@
+import { recordarConsulta } from './tiempoReal.ts'
+import { mensajeAccion, notificar } from '../utils/toast.ts'
 export interface Usuario {
   id: string
   correo: string
+  roles?: string[]
+  acciones?: string[]
 }
 
 interface RespuestaError {
@@ -26,12 +30,32 @@ export const alExpirarSesion = (fn: (() => void) | null) => {
 
 // Llama al backend (/api/...). La sesion viaja en la cookie HttpOnly 'sesion',
 // que el navegador envia solo; el frontend nunca ve el token.
-export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
-  const respuesta = await llamar(ruta, opciones)
-  if (respuesta.status === 204) {
-    return undefined as T
+export async function api<T>(ruta: string, opciones: RequestInit & { notificar?: boolean } = {}): Promise<T> {
+  const { notificar: avisar, ...peticion } = opciones
+  const metodo = (peticion.method ?? 'GET').toUpperCase()
+  const automatico = ['/auth/sesion', '/rutas', '/configuracion/sitio', '/catalogos/accesstype'].includes(ruta)
+  const mostrar = avisar ?? (!automatico && (metodo !== 'GET' || /^\/(servicios|auditoria-usuarios)(\/|\?|$)/.test(ruta)))
+  try {
+    const respuesta = await llamar(ruta, peticion)
+    if (respuesta.status === 204) {
+      if (mostrar) notificar(mensajeAccion(ruta, metodo))
+      return undefined as T
+    }
+    const datos = await respuesta.json() as T
+    recordarConsulta(ruta, peticion)
+    if (mostrar) {
+      const parcial = datos as { errores?: unknown[]; resultados?: { error?: string; newRelic?: { error?: string } }[]; resultado?: { error?: string } }
+      if (parcial?.errores?.length || parcial?.resultados?.some(r => r.error || r.newRelic?.error) || parcial?.resultado?.error) {
+        notificar('La operación terminó con errores. Revisa el detalle en el formulario.', 'aviso')
+      } else notificar(mensajeAccion(ruta, metodo))
+    }
+    return datos
+  } catch (error) {
+    if (mostrar && !(error instanceof DOMException && error.name === 'AbortError')) {
+      notificar(error instanceof Error ? error.message : 'No se pudo completar la operación', 'error')
+    }
+    throw error
   }
-  return respuesta.json().catch(() => null) as Promise<T>
 }
 
 // fetch con la cookie de sesion; si la respuesta no es OK lanza ErrorApi con el mensaje del backend

@@ -1,3 +1,4 @@
+import CargaInicial from '../components/CargaInicial.tsx'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth.ts'
@@ -24,6 +25,7 @@ export default function Login() {
   // Al iniciar sesion, la guarda SoloInvitado redirige a la pagina que se pidio o al inicio
   const enviar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault()
+    if (cargando) return
     setError(null)
     setCargando(true)
     try {
@@ -35,7 +37,8 @@ export default function Login() {
   }
 
   return (
-    <main className="login">
+    <main className="login" aria-busy={cargando}>
+      {cargando && <div className="transicion-ruta transicion-sesion"><CargaInicial mensaje="Iniciando sesión" /></div>}
       <form className="tarjeta" onSubmit={enviar} noValidate>
         {logo && <img src={logo} alt="" className="logo-login" />}
         <h1>Iniciar sesión</h1>
