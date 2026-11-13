@@ -74,9 +74,10 @@ export default function Auditoria() {
   const [nits, setNits] = useState<string[]>([])
   const [estados, setEstados] = useState<string[]>([])
   const [facturas, setFacturas] = useState('')
+  const [destinatarios, setDestinatarios] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
-  // Filtros de la ultima busqueda: la paginacion y la exportacion usan estos, no lo que se este escribiendo
+  // Filtros de la ultima busqueda para mantener la paginacion consistente
   const [aplicados, setAplicados] = useState<FiltrosRechazos | null>(null)
   const [resultado, setResultado] = useState<RespuestaRechazos | null>(null)
   useRespuestaTiempoReal<RespuestaRechazos>('/sendgrid/auditoria', setResultado)
@@ -102,6 +103,7 @@ export default function Auditoria() {
   const leerFiltros = ({ estados: filtroEstados = estados, nits: filtroNits = nits }: Cambios = {}): FiltrosRechazos => ({
     nits: filtroNits,
     facturas: separarValores(facturas),
+    destinatarios: separarValores(destinatarios),
     estados: filtroEstados.filter((e) => e !== PENDIENTES),
     pendientes: filtroEstados.includes(PENDIENTES),
     desde: desde || undefined,
@@ -164,12 +166,17 @@ export default function Auditoria() {
     cargarEmpresas()
   }
 
-  // Descarga en Excel o PDF todos los rechazos de la busqueda (no solo la pagina visible)
+  // Descarga todos los rechazos que coinciden con los filtros actuales del formulario
   const exportar = async (formato: Formato) => {
     setError(null)
+    setAviso(null)
     try {
-      const filtros = aplicados ?? leerFiltros()
+      const filtros = leerFiltros()
       const filas = await exportarRechazos(filtros)
+      if (filas.length === 0) {
+        setAviso('No hay eventos rechazados para exportar con los filtros seleccionados.')
+        return
+      }
       await exportarArchivo(formato, {
         nombre: `rechazos-sendgrid-${new Date().toISOString().slice(0, 10)}`,
         titulo: 'Eventos de rechazos de SendGrid',
@@ -189,6 +196,7 @@ export default function Auditoria() {
     filtros.estados.length > 0 && `Estados: ${filtros.estados.join(', ')}`,
     filtros.pendientes && 'deferred pendientes',
     filtros.facturas.length > 0 && `Facturas: ${filtros.facturas.join(', ')}`,
+    filtros.destinatarios.length > 0 && `Destinatarios: ${filtros.destinatarios.join(', ')}`,
     (filtros.desde || filtros.hasta) && `Fechas: ${filtros.desde ?? '…'} a ${filtros.hasta ?? '…'}`,
   ].filter(Boolean).join(' · ')
 
@@ -260,6 +268,17 @@ export default function Auditoria() {
             />
           </div>
           <div className="campo">
+            <label htmlFor="destinatarios">Destinatarios (opcional)</label>
+            <input
+              id="destinatarios"
+              type="search"
+              value={destinatarios}
+              onChange={(e) => setDestinatarios(e.target.value)}
+              placeholder="a@dominio.com, nuevaeps"
+              title="Varios separados por coma o espacio. Correo completo: exacto; parte del correo: lo contiene"
+            />
+          </div>
+          <div className="campo">
             <label htmlFor="desde">Desde</label>
             <input id="desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           </div>
@@ -280,7 +299,10 @@ export default function Auditoria() {
             >
               {sincronizando ? 'Sincronizando…' : 'Sincronizar'}
             </button>
-            <MenuExportar onExportar={exportar} disabled={!resultado || resultado.total === 0} />
+            <MenuExportar onExportar={exportar} />
+            <span className="ayuda-campo">
+              Exporta todos los resultados con el estado, destinatarios y empresa seleccionados.
+            </span>
             <button type="button" className="secundario" onClick={() => setVerBases(true)}>
               Bases
             </button>

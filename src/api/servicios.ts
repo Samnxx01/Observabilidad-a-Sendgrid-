@@ -17,3 +17,15 @@ export interface EstadoServicios {
   servicios: Servicio[]
 }
 export const obtenerEstadoServicios = (signal?: AbortSignal) => api<EstadoServicios>('/servicios', { signal })
+
+export interface Integraciones {
+  sendgridConfigurado: boolean
+  newrelicConfigurado: boolean
+  keyId: string
+  account: string
+  region: 'US' | 'EU'
+  enabled: boolean
+}
+export const obtenerIntegraciones = () => api<Integraciones>('/servicios/integraciones')
+export const guardarIntegraciones = (datos: Omit<Integraciones, 'sendgridConfigurado' | 'newrelicConfigurado'> & { sendgridApiKey: string; newrelicApiKey: string }) =>
+  api<Integraciones>('/servicios/integraciones', { method: 'PUT', body: JSON.stringify(datos) })

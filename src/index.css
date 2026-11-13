@@ -1216,3 +1216,13 @@ tr.fila-error td {
     overflow: visible;
   }
 }
+
+/* Trazabilidad: dias en que no se entrego nada y ceros atenuados */
+tr.fila-alerta td {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.cero {
+  opacity: 0.45;
+}

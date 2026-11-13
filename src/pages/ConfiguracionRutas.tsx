@@ -18,6 +18,7 @@ import SeleccionMultiple from '../components/SeleccionMultiple.tsx'
 import ConfiguracionApariencia from '../components/ConfiguracionApariencia.tsx'
 import ConfiguracionInicio from '../components/ConfiguracionInicio.tsx'
 import ConfiguracionLogo from '../components/ConfiguracionLogo.tsx'
+import ModalUsuarios from '../components/ModalUsuarios.tsx'
 import ModalRoles from '../components/ModalRoles.tsx'
 import ModalAuditoria from '../components/ModalAuditoria.tsx'
 import { ACCESO } from '../rutas/accesos.ts'
@@ -35,6 +36,7 @@ const normalizarPath = (path: string) => path.trim().toLowerCase().replace(/\/+$
 export default function ConfiguracionRutas() {
   const confirmar = useConfirmar()
   const { recargar } = useRutas()
+  const [mostrarUsuarios, setMostrarUsuarios] = useState(false)
   const [mostrarRoles, setMostrarRoles] = useState(false)
   const [mostrarAuditoria, setMostrarAuditoria] = useState(false)
   const [rutas, setRutas] = useState<Ruta[]>([])
@@ -67,7 +69,7 @@ export default function ConfiguracionRutas() {
     obtenerRolesDeRutas().then(setRolesDisponibles).catch(() => {})
   }
 
-  const nombreRol = (codigo: string) => rolesDisponibles.find((r) => r.codigo === codigo)?.nombre ?? codigo
+  const nombreRol = (codigo: string) => rolesDisponibles.find((r) => r.id === codigo)?.nombre ?? codigo
   // Los roles aplican a rutas publicas y privadas (no a las de solo invitado)
   const codigoAcceso = accessTypes.find((t) => t.id === form.accessType)?.codigo
   const aplicanRoles = codigoAcceso === ACCESO.PRIVADA || codigoAcceso === ACCESO.PUBLICA
@@ -212,9 +214,11 @@ export default function ConfiguracionRutas() {
         <h1>Configuración de rutas</h1>
         <div className="acciones-form">
           <button type="button" className="secundario" onClick={() => setMostrarAuditoria(true)}>Ver auditoría</button>
+          <button type="button" className="secundario" onClick={() => setMostrarUsuarios(true)}>Administrar usuarios</button>
           <button type="button" onClick={() => setMostrarRoles(true)}>Registrar rol</button>
         </div>
       </div>
+      {mostrarUsuarios && <ModalUsuarios onCerrar={() => setMostrarUsuarios(false)} />}
       {mostrarRoles && <ModalRoles onCerrar={cerrarRoles} />}
       {mostrarAuditoria && <ModalAuditoria onCerrar={() => setMostrarAuditoria(false)} />}
 
@@ -258,7 +262,7 @@ export default function ConfiguracionRutas() {
           <SeleccionMultiple
             id="ruta-roles"
             etiqueta="Roles que pueden ver y ejecutar"
-            opciones={rolesDisponibles.map((r) => ({ valor: r.codigo, texto: `${r.nombre} · ${r.codigo}` }))}
+            opciones={rolesDisponibles.map((r) => ({ valor: r.id, texto: `${r.nombre} · ${r.codigo}` }))}
             seleccion={form.roles}
             onCambio={(roles) => cambiar('roles', roles)}
             textoTodos="Selecciona…"

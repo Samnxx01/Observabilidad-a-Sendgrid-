@@ -62,7 +62,7 @@ export default function Registro() {
           {usuario ? (
             <>
               <p className="subtitulo">
-                El usuario <strong>{registrado}</strong> quedó registrado y ya puede iniciar sesión.
+                El usuario <strong>{registrado}</strong> quedó registrado y queda pendiente de verificación y asignación de roles en Administrar usuarios.
               </p>
               <button type="button" onClick={crearOtra}>Crear otra cuenta</button>
             </>

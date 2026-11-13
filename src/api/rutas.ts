@@ -30,6 +30,7 @@ export interface DatosRuta {
 }
 
 export interface RolDisponible {
+  id: string
   codigo: string
   nombre: string
 }

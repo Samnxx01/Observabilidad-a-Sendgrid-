@@ -1,3 +1,4 @@
+import ConfiguracionIntegraciones from '../components/ConfiguracionIntegraciones.tsx'
 import { useRespuestaTiempoReal } from '../components/useRespuestaTiempoReal.ts'
 import { useEffect, useState } from 'react'
 import { obtenerEstadoServicios, type EstadoServicios as Estado } from '../api/servicios.ts'
@@ -34,6 +35,7 @@ export default function EstadoServicios() {
         <div className="titulo-con-ayuda"><h1>Estado de servicios</h1><AyudaServicios /></div>
         <button type="button" disabled={cargando} onClick={actualizar}>{cargando ? 'Actualizando...' : 'Actualizar estado'}</button>
       </div>
+      <ConfiguracionIntegraciones onGuardado={actualizar} />
       <p>SendGrid se comprueba con una consulta autenticada a su API. Las otras tarjetas muestran conexiones, procesos o configuración del backend.</p>
       {error && <p className="alerta alerta-error" role="alert">{error}</p>}
       {cargando && <p role="status">Consultando estado de servicios...</p>}

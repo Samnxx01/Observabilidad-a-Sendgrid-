@@ -3,6 +3,7 @@ import { mensajeAccion, notificar } from '../utils/toast.ts'
 export interface Usuario {
   id: string
   correo: string
+  verificado?: boolean
   roles?: string[]
   acciones?: string[]
 }

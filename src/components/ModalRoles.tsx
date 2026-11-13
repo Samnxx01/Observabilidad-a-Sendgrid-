@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { guardarRol, obtenerAcciones, obtenerRoles, type Rol } from '../api/roles.ts'
 
 const ETIQUETAS: Record<string, string> = {
+  'usuarios.contrasenas': 'Cambiar contrase\u00f1as de usuarios',
   'usuarios.administrar': 'Administrar usuarios',
   'roles.administrar': 'Administrar roles',
   'rutas.administrar': 'Administrar rutas',
@@ -16,6 +17,8 @@ const ETIQUETAS: Record<string, string> = {
   'watcher.administrar': 'Administrar programación de sincronización',
   'limpieza.administrar': 'Administrar limpieza de registros',
   'newrelic.enviar': 'Enviar eventos a New Relic',
+  'supresiones.administrar': 'Quitar correos de la lista de supresión de SendGrid',
+  'reenvios.administrar': 'Marcar facturas para reenvío (Status 0 en facturación)',
 }
 
 export default function ModalRoles({ onCerrar }: { onCerrar: () => void }) {
@@ -68,7 +71,7 @@ export default function ModalRoles({ onCerrar }: { onCerrar: () => void }) {
     setCodigo(rol.codigo)
     setNombre(rol.nombre)
     setSeleccionadas(rol.acciones.filter(accion => acciones.includes(accion)))
-    setEditando(rol.codigo)
+    setEditando(rol.id)
     setError(null)
     setMensaje(null)
     formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -88,7 +91,7 @@ export default function ModalRoles({ onCerrar }: { onCerrar: () => void }) {
       return
     }
     // Quitarle a un rol la administracion de roles o usuarios puede dejar a todos sin acceso a esta pantalla
-    const anterior = roles.find(rol => rol.codigo === editando)
+    const anterior = roles.find(rol => rol.id === editando)
     const quitaCriticas = anterior?.acciones.filter(accion =>
       ['roles.administrar', 'usuarios.administrar'].includes(accion) && !seleccionadas.includes(accion)) ?? []
     if (quitaCriticas.length > 0 && !await confirmar(
@@ -98,7 +101,7 @@ export default function ModalRoles({ onCerrar }: { onCerrar: () => void }) {
     }
     setGuardando(true)
     try {
-      const rol = await guardarRol({ codigo, nombre: nombre.trim(), acciones: seleccionadas })
+      const rol = await guardarRol({ id: editando ?? undefined, codigo, nombre: nombre.trim(), acciones: seleccionadas })
       setRoles(actuales => [...actuales.filter(r => r.codigo !== rol.codigo), rol]
         .sort((a, b) => a.codigo.localeCompare(b.codigo)))
       setMensaje(editando ? `Rol ${rol.nombre} actualizado correctamente.` : `Rol ${rol.nombre} registrado correctamente.`)
@@ -123,7 +126,7 @@ export default function ModalRoles({ onCerrar }: { onCerrar: () => void }) {
       {mensaje && <p className="alerta alerta-info" role="status">{mensaje}</p>}
       {cargando ? <p role="status">Cargando roles y acciones…</p> : (
         <form ref={formulario} onSubmit={guardar}>
-          {editando && <p className="alerta alerta-info" role="status">Editando el rol <strong>{editando}</strong>. El código no se puede cambiar.</p>}
+          {editando && <p className="alerta alerta-info" role="status">Editando el rol <strong>{codigo}</strong>. El código no se puede cambiar.</p>}
           <fieldset className="rol-formulario" disabled={guardando || acciones.length === 0}>
             <div className="rol-datos">
               <div className="campo">
@@ -172,7 +175,7 @@ export default function ModalRoles({ onCerrar }: { onCerrar: () => void }) {
             <table>
               <thead><tr><th>Código</th><th>Nombre</th><th>Acciones</th><th aria-label="Opciones"></th></tr></thead>
               <tbody>{roles.map(rol => (
-                <tr key={rol.codigo} className={editando === rol.codigo ? 'fila-editando' : undefined}>
+                <tr key={rol.codigo} className={editando === rol.id ? 'fila-editando' : undefined}>
                   <td>{rol.codigo}</td>
                   <td>{rol.nombre}</td>
                   <td title={rol.acciones.map(a => ETIQUETAS[a] ?? a).join('\n')}>{rol.acciones.length}</td>

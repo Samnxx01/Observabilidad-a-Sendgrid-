@@ -37,6 +37,8 @@ export interface Rechazo {
 export interface FiltrosRechazos {
   nits: string[]
   facturas: string[]
+  // Correo completo (igual) o parte del correo (contiene)
+  destinatarios: string[]
   estados: string[]
   pendientes: boolean
   desde?: string

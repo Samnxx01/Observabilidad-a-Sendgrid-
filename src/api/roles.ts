@@ -1,6 +1,7 @@
 import { api } from './cliente.ts'
 
 export interface Rol {
+  id: string
   codigo: string
   nombre: string
   acciones: string[]
@@ -12,8 +13,8 @@ export const obtenerRoles = async (signal?: AbortSignal) =>
 export const obtenerAcciones = async (signal?: AbortSignal) =>
   (await api<{ acciones: string[] }>('/roles/acciones', { signal })).acciones
 
-export const guardarRol = async (rol: Rol) =>
-  (await api<{ rol: Rol }>(`/roles/${encodeURIComponent(rol.codigo)}`, {
-    method: 'PUT',
-    body: JSON.stringify({ nombre: rol.nombre, acciones: rol.acciones }),
+export const guardarRol = async (rol: Omit<Rol, 'id'> & { id?: string }) =>
+  (await api<{ rol: Rol }>(rol.id ? `/roles/${encodeURIComponent(rol.id)}` : '/roles', {
+    method: rol.id ? 'PUT' : 'POST',
+    body: JSON.stringify({ codigo: rol.codigo, nombre: rol.nombre, acciones: rol.acciones }),
   })).rol

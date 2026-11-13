@@ -10,6 +10,7 @@ export const COMPONENTES: Record<string, LazyExoticComponent<ComponentType>> = {
   Facturas: lazy(() => import('../pages/Facturas.tsx')),
   Auditoria: lazy(() => import('../pages/Auditoria.tsx')),
   NotificacionesFactura: lazy(() => import('../pages/NotificacionesFactura.tsx')),
+  Dropped: lazy(() => import('../pages/Dropped.tsx')),
   ConfiguracionRutas: lazy(() => import('../pages/ConfiguracionRutas.tsx')),
 }
 
