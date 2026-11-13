@@ -8,6 +8,7 @@ const ETIQUETAS: Record<string, string> = {
   'usuarios.administrar': 'Administrar usuarios',
   'roles.administrar': 'Administrar roles',
   'rutas.administrar': 'Administrar rutas',
+  'empresas.dominios.administrar': 'Administrar empresas y dominios',
   'sendgrid.ips.administrar': 'Administrar IP de SendGrid',
   'configuracion.administrar': 'Administrar configuración del sitio',
   'facturas.consultar': 'Consultar facturas',

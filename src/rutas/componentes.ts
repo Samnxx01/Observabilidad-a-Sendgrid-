@@ -4,6 +4,7 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 // (campo "componente" de la coleccion rutasseguridad). Para que una pantalla nueva
 // se pueda usar en una ruta dinamica, hay que registrarla aqui.
 export const COMPONENTES: Record<string, LazyExoticComponent<ComponentType>> = {
+  EmpresasDominios: lazy(() => import('../pages/EmpresasDominios.tsx')),
   AccesoIpSendgrid: lazy(() => import('../pages/AccesoIpSendgrid.tsx')),
   EstadoServicios: lazy(() => import('../pages/EstadoServicios.tsx')),
   Login: lazy(() => import('../pages/Login.tsx')),
