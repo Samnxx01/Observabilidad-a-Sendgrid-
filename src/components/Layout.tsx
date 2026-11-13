@@ -1,5 +1,6 @@
 import { EstadoConexion } from './TiempoReal.tsx'
-import { NavLink, Outlet } from 'react-router'
+import { NavLink } from 'react-router'
+import PaginasPersistentes from './PaginasPersistentes.tsx'
 import { useAuth } from '../auth/useAuth.ts'
 import { ACCESO } from '../rutas/accesos.ts'
 import { useRutas } from '../rutas/useRutas.ts'
@@ -30,7 +31,7 @@ export default function Layout() {
           <button type="button" className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
         </div>
       </header>
-      <Outlet />
+      <PaginasPersistentes key={usuario?.id} />
     </div>
   )
 }
