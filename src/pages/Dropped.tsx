@@ -12,7 +12,7 @@ export default function Dropped() {
   return (
     <main className="contenido">
       <div className="titulo-con-ayuda">
-        <h1>Envíos dropped</h1>
+        <h1>Supresiones actuales de SendGrid</h1>
         <AyudaDropped />
       </div>
       <ConsultaDropped onVerTrazabilidad={(correo) => setTraza((t) => ({ correo, version: t.version + 1 }))} />

@@ -1,371 +1,79 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api } from '../api/cliente.ts'
+import { useAuth } from '../auth/useAuth.ts'
 import MenuExportar from './MenuExportar.tsx'
-import SeleccionMultiple from './SeleccionMultiple.tsx'
-import { separarValores } from '../utils/descargas.ts'
-import { exportarArchivo, type Columna, type Formato } from '../utils/exportar.ts'
-import ModalQuitarSupresion, { ACCIONES_SUPRESION, type AccionSupresion } from './ModalQuitarSupresion.tsx'
-
-interface Mensaje {
-  sg_message_id: string
-  from_email?: string
-  to_email: string
-  reason?: string
-  sg_message_id_created_at: string
-}
-
-interface RespuestaDropped {
-  messages: Mensaje[]
-  // true si hay mas envios de los que el backend alcanza a traer
-  incompleto?: boolean
-}
-
-// Un destinatario con todos sus dropped (vista "Por destinatario")
-interface Destinatario {
-  to_email: string
-  envios: number
-  motivos: string
-  listaMotivos: string[]
-  primero: string
-  ultimo: string
-}
-
-// Filas por pagina de la tabla (la exportacion incluye todas)
-const POR_PAGINA = 50
-
-// SendGrid solo guarda 30 dias; el backend sube un desde mas antiguo al minimo permitido
-const DIAS_HISTORIAL_SENDGRID = 30
-
-// 'YYYY-MM-DD' en hora Colombia, n dias atras
-const diaColombia = (diasAtras = 0) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Bogota' })
-    .format(new Date(Date.now() - diasAtras * 24 * 3600 * 1000))
-
-const formatoDia = (dia: string) => dia.split('-').reverse().join('/')
-
-// Rango buscado; sin fechas SendGrid usa sus ultimos 30 dias
-const textoRango = ({ desde, hasta }: { desde: string; hasta: string }) =>
-  `${desde ? formatoDia(desde) : 'últimos 30 días'} a ${hasta ? formatoDia(hasta) : 'hoy'}`
-
-const formatoFecha = new Intl.DateTimeFormat('es-CO', {
-  dateStyle: 'short',
-  timeStyle: 'short',
-  timeZone: 'America/Bogota',
-})
-
-const fecha = (iso: string) => formatoFecha.format(new Date(iso))
-
-const SIN_MOTIVO = '(sin motivo)'
-const motivo = (m: Mensaje) => m.reason || SIN_MOTIVO
-
-const COLUMNAS_ENVIOS: Columna<Mensaje>[] = [
-  { titulo: 'Fecha (Colombia)', valor: (m) => fecha(m.sg_message_id_created_at), ancho: 16 },
-  { titulo: 'Destinatario', valor: (m) => m.to_email, ancho: 34 },
-  { titulo: 'Motivo', valor: motivo, ancho: 22 },
-  { titulo: 'Remitente', valor: (m) => m.from_email, ancho: 30 },
-  { titulo: 'Message ID', valor: (m) => m.sg_message_id, ancho: 45 },
-]
-
-const COLUMNAS_DESTINATARIOS: Columna<Destinatario>[] = [
-  { titulo: 'Destinatario', valor: (d) => d.to_email, ancho: 34 },
-  { titulo: 'Envíos dropped', valor: (d) => d.envios, ancho: 14 },
-  { titulo: 'Motivo', valor: (d) => d.motivos, ancho: 26 },
-  { titulo: 'Primero (Colombia)', valor: (d) => fecha(d.primero), ancho: 16 },
-  { titulo: 'Último (Colombia)', valor: (d) => fecha(d.ultimo), ancho: 16 },
-]
-
-// Agrupa los envios por destinatario, del que tiene mas dropped al que tiene menos
-const agrupar = (mensajes: Mensaje[]): Destinatario[] => {
-  const grupos = new Map<string, { envios: number; motivos: Set<string>; primero: string; ultimo: string }>()
-  mensajes.forEach((m) => {
-    const clave = m.to_email.toLowerCase()
-    const grupo = grupos.get(clave)
-    if (!grupo) {
-      grupos.set(clave, {
-        envios: 1, motivos: new Set([motivo(m)]),
-        primero: m.sg_message_id_created_at, ultimo: m.sg_message_id_created_at,
-      })
-      return
-    }
-    grupo.envios++
-    grupo.motivos.add(motivo(m))
-    if (m.sg_message_id_created_at < grupo.primero) grupo.primero = m.sg_message_id_created_at
-    if (m.sg_message_id_created_at > grupo.ultimo) grupo.ultimo = m.sg_message_id_created_at
-  })
-  return [...grupos.entries()]
-    .map(([to_email, g]) => ({
-      to_email, envios: g.envios, motivos: [...g.motivos].join(', '), listaMotivos: [...g.motivos],
-      primero: g.primero, ultimo: g.ultimo,
-    }))
-    .sort((a, b) => b.envios - a.envios || a.to_email.localeCompare(b.to_email))
-}
-
-interface Props {
-  // Valores con los que arranca el formulario, ej. al abrirlo desde otra pantalla
-  destinatariosIniciales?: string[]
-  // Si viene, la vista por destinatario muestra un boton para ver la trazabilidad de cada correo
-  onVerTrazabilidad?: (correo: string) => void
-}
-
-// Consulta independiente de los envios que SendGrid no envio por la lista de supresion (dropped,
-// via /api/dropped). Se puede usar en cualquier pantalla. SendGrid los guarda sin
-// asunto, por eso no se pueden filtrar por empresa ni factura: solo por fechas y destinatarios.
+import { exportarArchivo, type Formato } from '../utils/exportar.ts'
+import ModalQuitarSupresion, { type AccionSupresion } from './ModalQuitarSupresion.tsx'
+interface Registro { email: string; lista: string; motivo: string; fecha: string | null }
+interface Resultado { registros: Registro[]; incompleto: boolean; consultadoEn: string; listas: string[] }
+interface Props { destinatariosIniciales?: string[]; onVerTrazabilidad?: (correo: string) => void }
+const nombres: Record<string, string> = { bounces: 'Bounces', blocks: 'Blocks', invalid_emails: 'Invalid emails', spam_reports: 'Spam reports' }
+const fecha = (valor: string | null) => valor ? new Date(valor).toLocaleString('es-CO', { timeZone: 'America/Bogota' }) : 'Sin fecha'
 export default function ConsultaDropped({ destinatariosIniciales = [], onVerTrazabilidad }: Props) {
-  const id = useId()
-  const [destinatario, setDestinatario] = useState(destinatariosIniciales.join(', '))
-  const [desde, setDesde] = useState(() => diaColombia(DIAS_HISTORIAL_SENDGRID))
-  const [hasta, setHasta] = useState(() => diaColombia())
-  const [motivos, setMotivos] = useState<string[]>([])
-  const [porDestinatario, setPorDestinatario] = useState(false)
-  // Rango de la ultima busqueda, para el resumen y la exportacion
-  const [rangoBuscado, setRangoBuscado] = useState({ desde: '', hasta: '' })
-  const [resultado, setResultado] = useState<RespuestaDropped | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [cargando, setCargando] = useState(false)
-  const [pagina, setPagina] = useState(1)
-  // Correos quitados de la supresion en esta sesion y el modal para quitarlos
-  const [quitados, setQuitados] = useState<Set<string>>(new Set())
-  const [modalSupresion, setModalSupresion] = useState<AccionSupresion | null>(null)
-
-  // Un resultado nuevo o un cambio de filtro o de vista vuelve a la primera pagina
-  useEffect(() => setPagina(1), [resultado, motivos, destinatario, porDestinatario])
-
-  const buscar = async (evento: FormEvent<HTMLFormElement>) => {
-    evento.preventDefault()
-    setError(null)
-    setCargando(true)
-    try {
-      // Todos los filtros son opcionales; los vacios no filtran
-      setResultado(await api<RespuestaDropped>('/dropped/consultar', {
-        method: 'POST',
-        body: JSON.stringify({ desde, hasta, destinatarios: separarValores(destinatario) }),
-      }))
-      setRangoBuscado({ desde, hasta })
-    } catch (err) {
-      setResultado(null)
-      setError(err instanceof Error ? err.message : 'No se pudo consultar')
-    } finally {
-      setCargando(false)
-    }
-  }
-
-  // Motivo y destinatario parcial filtran lo ya traido sin volver a consultar
-  const motivosPresentes = [...new Set(resultado?.messages.map(motivo) ?? [])].sort()
-  const destinatarios = separarValores(destinatario.toLowerCase())
-  const mensajes = resultado?.messages.filter((m) =>
-    (motivos.length === 0 || motivos.includes(motivo(m)))
-    && (destinatarios.length === 0 || destinatarios.some((d) => m.to_email.toLowerCase().includes(d)))) ?? []
-  // Se agrupa siempre: lo usan la vista por destinatario y el modal de supresion
-  const grupos = agrupar(mensajes)
-
-  const filas = porDestinatario ? grupos.length : mensajes.length
-  const paginas = Math.max(1, Math.ceil(filas / POR_PAGINA))
-  const desdeFila = (pagina - 1) * POR_PAGINA
-  const conteoPorMotivo = motivosPresentes.map((mo) => [mo, mensajes.filter((m) => motivo(m) === mo).length] as const)
-
-
-  // Exporta todo lo que arrojo la busqueda (todas las paginas) en la vista elegida
-  const exportar = async (formato: Formato) => {
-    setError(null)
-    const comun = {
-      nombre: `dropped-sendgrid${porDestinatario ? '-por-destinatario' : ''}-${new Date().toISOString().slice(0, 10)}`,
-      titulo: `Envíos dropped en SendGrid${porDestinatario ? ' · por destinatario' : ''}`,
-      detalle: [
-        `Fechas: ${textoRango(rangoBuscado)} (Colombia)`,
-        destinatarios.length > 0 && `Destinatarios: ${destinatarios.join(', ')}`,
-        motivos.length > 0 && `Motivos: ${motivos.join(', ')}`,
-        porDestinatario && `${mensajes.length} envío(s)`,
-        resultado?.incompleto && 'Resultado incompleto: hay más envíos en el rango',
-      ].filter(Boolean).join(' · '),
-    }
-    try {
-      if (porDestinatario) {
-        await exportarArchivo(formato, { ...comun, columnas: COLUMNAS_DESTINATARIOS, filas: grupos })
-      } else {
-        await exportarArchivo(formato, { ...comun, columnas: COLUMNAS_ENVIOS, filas: mensajes })
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo exportar')
-    }
-  }
-
-  return (
-    <>
-      <form className="busqueda" onSubmit={buscar}>
-        <div className="campo">
-          <label htmlFor={`${id}-destinatario`}>Destinatarios</label>
-          <input
-            id={`${id}-destinatario`}
-            type="search"
-            value={destinatario}
-            onChange={(e) => setDestinatario(e.target.value)}
-            placeholder="a@dominio.com, b@dominio.com"
-            title="Varios separados por coma o espacio. Correos completos: los filtra SendGrid. Parte de un correo: filtra los resultados traídos"
-          />
-        </div>
-        <div className="campo">
-          <label htmlFor={`${id}-desde`}>Desde</label>
-          <input
-            id={`${id}-desde`}
-            type="date"
-            min={diaColombia(DIAS_HISTORIAL_SENDGRID)}
-            max={hasta || diaColombia()}
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            title="SendGrid solo guarda los últimos 30 días"
-          />
-        </div>
-        <div className="campo">
-          <label htmlFor={`${id}-hasta`}>Hasta</label>
-          <input
-            id={`${id}-hasta`}
-            type="date"
-            min={desde || diaColombia(DIAS_HISTORIAL_SENDGRID)}
-            max={diaColombia()}
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-          />
-        </div>
-        <SeleccionMultiple
-          id={`${id}-motivos`}
-          etiqueta="Motivo"
-          opciones={motivosPresentes.map((m) => ({ valor: m, texto: m }))}
-          seleccion={motivos}
-          onCambio={setMotivos}
-          disabled={!resultado}
-        />
-        <div className="campo">
-          <label htmlFor={`${id}-vista`}>Vista</label>
-          <select
-            id={`${id}-vista`}
-            value={porDestinatario ? 'destinatario' : 'envios'}
-            onChange={(e) => setPorDestinatario(e.target.value === 'destinatario')}
-          >
-            <option value="envios">Cada envío</option>
-            <option value="destinatario">Por destinatario</option>
-          </select>
-        </div>
-        <div className="acciones-form">
-          <button type="submit" disabled={cargando}>
-            {cargando ? 'Buscando…' : 'Buscar'}
-          </button>
-          <MenuExportar onExportar={exportar} disabled={filas === 0} />
-          {(Object.keys(ACCIONES_SUPRESION) as AccionSupresion[]).map((accion) => (
-            <button key={accion} type="button" className="secundario"
-              onClick={() => setModalSupresion(accion)} disabled={grupos.length === 0}
-              title={ACCIONES_SUPRESION[accion].ayuda}>
-              Quitar de {ACCIONES_SUPRESION[accion].nombre}?
-            </button>
-          ))}
-        </div>
-      </form>
-
-      {error && <p className="alerta alerta-error" role="alert">{error}</p>}
-
-      {resultado && (
-        <section>
-          <p className="resumen">
-            {textoRango(rangoBuscado)}
-            {' · '}{mensajes.length} envío(s) dropped
-            {mensajes.length < resultado.messages.length && ` de ${resultado.messages.length}`}
-            {' · '}{porDestinatario ? grupos.length : new Set(mensajes.map((m) => m.to_email.toLowerCase())).size} destinatario(s)
-            {conteoPorMotivo.map(([mo, n]) => <span key={mo} className="insignia">{mo}: {n}</span>)}
-          </p>
-          {resultado.incompleto && (
-            <p className="alerta alerta-error" role="alert">
-              Hay más envíos de los que se pueden traer en una búsqueda; reduce el rango de fechas o busca por destinatarios.
-            </p>
-          )}
-          {filas === 0 ? (
-            <p className="vacio">No hay envíos dropped para esta búsqueda.</p>
-          ) : (
-            <div className="tabla-scroll">
-              {porDestinatario ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Destinatario</th>
-                      <th>Envíos</th>
-                      <th>Motivo</th>
-                      <th>Primero</th>
-                      <th>Último</th>
-                      {onVerTrazabilidad && <th></th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {grupos.slice(desdeFila, desdeFila + POR_PAGINA).map((d) => (
-                      <tr key={d.to_email}>
-                        <td>
-                          {d.to_email}
-                          {quitados.has(`dropped|${d.to_email}`) && (
-                            <span className="insignia insignia-ok" title="Quitado de la lista de supresión">✓ quitado</span>
-                          )}
-                        </td>
-                        <td>{d.envios}</td>
-                        <td>{d.motivos}</td>
-                        <td>{fecha(d.primero)}</td>
-                        <td>{fecha(d.ultimo)}</td>
-                        {onVerTrazabilidad && (
-                          <td>
-                            <button type="button" className="secundario" onClick={() => onVerTrazabilidad(d.to_email)}>
-                              Trazabilidad
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Destinatario</th>
-                      <th>Motivo</th>
-                      <th>Remitente</th>
-                      <th>Message ID</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mensajes.slice(desdeFila, desdeFila + POR_PAGINA).map((m) => (
-                      <tr key={m.sg_message_id}>
-                        <td>{fecha(m.sg_message_id_created_at)}</td>
-                        <td>{m.to_email}</td>
-                        <td><span className="estado estado-dropped">{motivo(m)}</span></td>
-                        <td>{m.from_email}</td>
-                        <td className="respuesta"><code>{m.sg_message_id}</code></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-          {paginas > 1 && (
-            <nav className="paginacion" aria-label="Paginación">
-              <button type="button" className="secundario" onClick={() => setPagina(1)}
-                disabled={pagina <= 1} aria-label="Primera página">«</button>
-              <button type="button" className="secundario" onClick={() => setPagina(pagina - 1)}
-                disabled={pagina <= 1}>Anterior</button>
-              <span>Página {pagina} de {paginas}</span>
-              <button type="button" className="secundario" onClick={() => setPagina(pagina + 1)}
-                disabled={pagina >= paginas}>Siguiente</button>
-              <button type="button" className="secundario" onClick={() => setPagina(paginas)}
-                disabled={pagina >= paginas} aria-label="Última página">»</button>
-            </nav>
-          )}
-        </section>
-      )}
-      {modalSupresion && (
-        <ModalQuitarSupresion
-          accion={modalSupresion}
-          destinatarios={grupos}
-          quitados={quitados}
-          onQuitados={(emails) => setQuitados((actual) => new Set([...actual, ...emails]))}
-          onCerrar={() => setModalSupresion(null)}
-        />
-      )}
-    </>
-  )
+ const { usuario } = useAuth()
+ const puedeQuitar = usuario?.acciones?.includes('supresiones.administrar')
+ const [filtro, setFiltro] = useState(destinatariosIniciales.join(', '))
+ const [lista, setLista] = useState('')
+ const [resultado, setResultado] = useState<Resultado | null>(null)
+ const [error, setError] = useState('')
+ const [aviso, setAviso] = useState('')
+ const [ocupado, setOcupado] = useState(false)
+ const [pagina, setPagina] = useState(1)
+ const [modal, setModal] = useState<AccionSupresion | null>(null)
+ const consulta = useRef<AbortController | null>(null)
+ useEffect(() => () => consulta.current?.abort(), [])
+ const buscar = async (evento?: FormEvent) => {
+  evento?.preventDefault()
+  if (consulta.current) return
+  const control = new AbortController()
+  consulta.current = control
+  setOcupado(true); setError(''); setAviso(''); setResultado(null); setPagina(1)
+  try {
+   const datos = await api<Resultado>('/dropped/consultar', { method: 'POST', signal: control.signal, notificar: false,
+    body: JSON.stringify({ destinatarios: filtro.split(/[\s,;]+/).filter(Boolean) }) })
+   if (!control.signal.aborted) setResultado(datos)
+  } catch (err) { if (!control.signal.aborted) setError(err instanceof Error ? err.message : 'No se pudo consultar.') }
+  finally { if (consulta.current === control) { consulta.current = null; setOcupado(false) } }
+ }
+ const registros = resultado?.registros.filter(r => !lista || r.lista === lista) ?? []
+ const paginas = Math.max(1, Math.ceil(registros.length / 50))
+ const exportar = async (formato: Formato) => {
+  try {
+   await exportarArchivo(formato, { nombre: 'supresiones-actuales', titulo: 'Destinatarios actualmente en supresion',
+    detalle: 'Consulta: ' + fecha(resultado?.consultadoEn ?? null) + '. Filtro: ' + (filtro || 'Todos los destinatarios de SendGrid'),
+    columnas: [
+     { titulo: 'Destinatario', valor: (r: Registro) => r.email, ancho: 35 },
+     { titulo: 'Lista actual', valor: (r: Registro) => nombres[r.lista], ancho: 20 },
+     { titulo: 'Motivo', valor: (r: Registro) => r.motivo, ancho: 50 },
+     { titulo: 'Registro (Colombia)', valor: (r: Registro) => fecha(r.fecha), ancho: 22 },
+    ], filas: registros })
+  } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo exportar.') }
+ }
+ const destinatarios = [...new Set(registros.filter(r => r.lista === modal).map(r => r.email))]
+  .map(to_email => ({ to_email, envios: 0, listaMotivos: [] }))
+ return <>
+ <p>Destinatarios que siguen registrados en Bounces, Blocks, Invalid emails o Spam reports. La tabla consulta el estado actual; la trazabilidad inferior conserva el historial de envios.</p>
+ <form className="busqueda" onSubmit={buscar}>
+ <div className="campo"><label htmlFor="sup-filtro">Dominios o correos</label>
+ <input id="sup-filtro" disabled={ocupado} value={filtro} onChange={e => { setFiltro(e.target.value); setResultado(null) }} placeholder="dominio.com, usuario@otro.com" /></div>
+ <div className="campo"><label htmlFor="sup-lista">Lista actual</label><select id="sup-lista" value={lista} onChange={e => { setLista(e.target.value); setPagina(1) }}>
+ <option value="">Todas</option>{Object.entries(nombres).map(([valor, nombre]) => <option key={valor} value={valor}>{nombre}</option>)}</select></div>
+ <div className="acciones-form"><button disabled={ocupado} type="submit">{ocupado ? 'Consultando...' : 'Buscar actuales'}</button>
+ {ocupado && <button type="button" onClick={() => { consulta.current?.abort(); setAviso('Consulta cancelada.') }}>Cancelar consulta</button>}
+ <MenuExportar disabled={!registros.length || ocupado} onExportar={exportar} />
+ {puedeQuitar && (['bounces', 'blocks', 'invalid_emails'] as const).map(accion => <button key={accion} type="button" disabled={ocupado || !registros.some(r => r.lista === accion)} onClick={() => setModal(accion)}>Quitar de {nombres[accion]}</button>)}
+ </div></form>
+ <p className="ayuda">Los datos se consultan directamente en SendGrid. Escribe dominios o correos para filtrar; vacio consulta todos los destinatarios. No incluye bajas de suscripcion.</p>
+ {error && <p className="alerta alerta-error" role="alert">{error}</p>}
+ {aviso && <p role="status">{aviso}</p>}
+ {resultado && <section><p>{registros.length} registro(s) actuales. Consultado: {fecha(resultado.consultadoEn)}.</p>
+ {resultado.incompleto && <p role="alert">Resultado incompleto: se alcanzo el limite de consulta. Puede haber mas destinatarios.</p>}
+ <div className="tabla-contenedor"><table><thead><tr><th>Destinatario</th><th>Lista actual</th><th>Motivo</th><th>Fecha del registro</th><th>Acciones</th></tr></thead>
+ <tbody>{registros.slice((pagina - 1) * 50, pagina * 50).map((r, i) => <tr key={r.lista + r.email + i}><td>{r.email}</td><td>{nombres[r.lista]}</td><td>{r.motivo}</td><td>{fecha(r.fecha)}</td>
+ <td>{onVerTrazabilidad && <button type="button" onClick={() => onVerTrazabilidad(r.email)}>Ver trazabilidad</button>}</td></tr>)}</tbody></table></div>
+ {!registros.length && <p>No hay destinatarios en estas listas para el filtro consultado.</p>}
+ {paginas > 1 && <nav className="paginacion"><button disabled={pagina <= 1} onClick={() => setPagina(p => p - 1)}>Anterior</button><span>{pagina} de {paginas}</span><button disabled={pagina >= paginas} onClick={() => setPagina(p => p + 1)}>Siguiente</button></nav>}
+ </section>}
+ {modal && <ModalQuitarSupresion accion={modal} destinatarios={destinatarios} quitados={new Set()} onQuitados={() => { setModal(null); void buscar() }} onCerrar={() => setModal(null)} />}
+ </>
 }

@@ -24,28 +24,12 @@ export function AyudaFacturas() {
 }
 
 export function AyudaDropped() {
-  return (
-    <Ayuda titulo="Envíos dropped en SendGrid">
-      <p>
-        Consulta en vivo los correos que SendGrid no envió porque la dirección está en una lista de supresión
-        (rebotó antes, es inválida, se dio de baja o reportó spam). SendGrid solo guarda los últimos 30 días.
-      </p>
-      <p>
-        SendGrid guarda estos envíos <strong>sin asunto</strong>, por eso no se pueden filtrar por empresa ni por
-        factura, y no aparecen en Facturas ni en Eventos de rechazos. Se filtran por fechas y destinatarios.
-      </p>
-      <p>
-        La vista <em>Por destinatario</em> agrupa los envíos de cada correo: sirve para saber qué direcciones hay que
-        corregir o sacar de la lista de supresión. Mientras sigan ahí, SendGrid descarta cada envío nuevo.
-      </p>
-      <p>
-        Con el botón <em>Quitar de supresión…</em> se eligen los correos de la búsqueda y se quitan de la lista (permiso
-        &quot;Quitar correos de la lista de supresión de SendGrid&quot;). Solo aplica a <em>Bounced Address</em> e
-        <em> Invalid</em>; los correos ya descartados no se reenvían: hay que reenviar la factura desde el sistema de
-        facturación. Si la dirección sigue mala, vuelve a la lista con el siguiente rebote.
-      </p>
-    </Ayuda>
-  )
+ return <Ayuda titulo="Supresiones actuales de SendGrid">
+ <p>Consulta los destinatarios presentes ahora en Bounces, Blocks, Invalid emails y Spam reports. No muestra eventos historicos ni bajas de suscripcion.</p>
+ <p>Los registros se obtienen directamente de SendGrid. Puedes escribir dominios o correos completos; sin filtro se consultan todos los destinatarios de la cuenta. Estas listas no identifican empresas por NIT.</p>
+ <p>La fecha indica cuando se registro la supresion. La trazabilidad inferior permite revisar el historial de envios por separado.</p>
+ <p>Quitar de una lista requiere el permiso de supresiones. No reenvia mensajes. Los reportes de spam no se eliminan desde esta pantalla.</p>
+ </Ayuda>
 }
 
 export function AyudaAuditoria() {
